@@ -38,8 +38,8 @@ func (c *Command) Help(response http.ResponseWriter, request *http.Request) erro
 func (c *Command) Readme(response http.ResponseWriter, request *http.Request) error {
 	response.Write(
 		[]byte(fmt.Sprintf(
-			"%s provides convenient shorthand for performing Google searches\n\n"+
-				"aliases: %s",
+			`"gobunny %s" provides convenient shorthand for performing Google searches\n\n`+
+				`aliases: %s`,
 			c.Name(),
 			strings.Join(c.Prefixes(), " "),
 		)),

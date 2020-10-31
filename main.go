@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -22,6 +24,8 @@ func makeRegistry() (registry.Registry, error) {
 
 func main() {
 	logger := log.New(os.Stderr, "gobunny: ", log.Lshortfile|log.Ltime)
+	host := flag.String("host", "", "hostname to bind http server to")
+	port := flag.Int("port", 8080, "port to bind http server to")
 
 	commands, err := makeRegistry()
 	if err != nil {
@@ -30,8 +34,11 @@ func main() {
 
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
-
+	router.Use(middleware.RealIP)
+	router.Use(middleware.RequestID)
 	router.Get("/q/{query}", handlers.GetQueryHandler(commands))
 
-	http.ListenAndServe(":8080", router)
+	bindAddr := fmt.Sprintf("%s:%d", *host, *port)
+	logger.Printf("starting http server on %s", bindAddr)
+	http.ListenAndServe(bindAddr, router)
 }
