@@ -10,6 +10,7 @@ import (
 
 var errNotFound = []byte("error: not found")
 
+// GetQueryHandler returns a http.HandlerFunc for handling querying Commands
 func GetQueryHandler(r registry.Registry) http.HandlerFunc {
 	return func(response http.ResponseWriter, request *http.Request) {
 		query := chi.URLParam(request, "query")

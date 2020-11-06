@@ -29,16 +29,19 @@ func main() {
 
 	commands, err := makeRegistry()
 	if err != nil {
-		logger.Panicf("unexpected error creating command registry: %s", err.Error())
+		logger.Fatalf("unexpected error creating command registry: %s", err.Error())
 	}
 
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Use(middleware.RealIP)
 	router.Use(middleware.RequestID)
+	router.Get("/health", handlers.HealthCheckHandler())
 	router.Get("/q/{query}", handlers.GetQueryHandler(commands))
 
 	bindAddr := fmt.Sprintf("%s:%d", *host, *port)
 	logger.Printf("starting http server on %s", bindAddr)
-	http.ListenAndServe(bindAddr, router)
+	if err := http.ListenAndServe(bindAddr, router); err != nil {
+		logger.Fatalf("unexpected error while running http server: %s", err.Error())
+	}
 }

@@ -2,21 +2,26 @@ package google
 
 import (
 	"fmt"
+	"gobunny/commands"
 	"net/http"
 	"strings"
 )
 
+// Command provides Google search support
 type Command struct{}
 
+// Aliases implements commands.Command
+func (c *Command) Aliases() []string {
+	return []string{"g"}
+}
+
+// Name implements commands.Command
 func (c *Command) Name() string {
 	return "google"
 }
 
-func (c *Command) Prefixes() []string {
-	return []string{"g"}
-}
-
-func (c *Command) Handle(args []string, response http.ResponseWriter, request *http.Request) error {
+// Handle implements commands.Command
+func (c *Command) Handle(args commands.Arguments, response http.ResponseWriter, request *http.Request) error {
 	joined := strings.Join(args, " ")
 	searchURL := fmt.Sprintf("https://google.com/search?q=%s", joined)
 
@@ -24,6 +29,7 @@ func (c *Command) Handle(args []string, response http.ResponseWriter, request *h
 	return nil
 }
 
+// Help implements commands.Command
 func (c *Command) Help(response http.ResponseWriter, request *http.Request) error {
 	response.Write(
 		[]byte(fmt.Sprintf(
@@ -35,13 +41,14 @@ func (c *Command) Help(response http.ResponseWriter, request *http.Request) erro
 	return nil
 }
 
+// Readme implements commands.Command
 func (c *Command) Readme(response http.ResponseWriter, request *http.Request) error {
 	response.Write(
 		[]byte(fmt.Sprintf(
 			`"gobunny %s" provides convenient shorthand for performing Google searches\n\n`+
 				`aliases: %s`,
 			c.Name(),
-			strings.Join(c.Prefixes(), " "),
+			strings.Join(c.Aliases(), " "),
 		)),
 	)
 

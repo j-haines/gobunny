@@ -11,54 +11,64 @@ type (
 		registered map[string]commands.Command
 	}
 
+	// Registry is responsible for the registration and storing of Commands
 	Registry interface {
+		// Get returns a Command registered under the given alias
 		Get(string) (commands.Command, bool)
 
+		// Register adds a Command to the Registry store under its Aliases
 		Register(commands.Command) error
+
+		// RegisterAll adds a slice of Commands to the Registry store, each
+		// under their corresponding Aliases
 		RegisterAll(...commands.Command) error
 	}
 )
 
 var (
-	// ErrNameAlreadyRegistered indicates a Command's Name() is already in the registry
-	ErrNameAlreadyRegistered = errors.New("command name has already been registered")
+	// ErrAliasAlreadyRegistered indicates one of a Command's Aliases()
+	// values is already in the registry
+	ErrAliasAlreadyRegistered = errors.New("command alias has already been registered")
 
-	// ErrPrefixAlreadyRegistered indicates one of a Command's Prefixes()
-	// values is already in the registrt
-	ErrPrefixAlreadyRegistered = errors.New("command prefix has already been registered")
+	// ErrNameAlreadyRegistered indicates a Command's Name() value is already in the registry
+	ErrNameAlreadyRegistered = errors.New("command name has already been registered")
 )
 
-func New() *registry {
+// New returns an instance of a Registry implementation
+func New() Registry {
 	return &registry{
 		registered: map[string]commands.Command{},
 	}
 }
 
+// Get implements Registry
 func (r *registry) Get(name string) (commands.Command, bool) {
 	command, found := r.registered[name]
 
 	return command, found
 }
 
+// Register implements Registry
 func (r *registry) Register(command commands.Command) error {
 	if _, found := r.registered[command.Name()]; found {
 		return ErrNameAlreadyRegistered
 	}
 
-	for _, prefix := range command.Prefixes() {
-		if _, found := r.registered[prefix]; found {
-			return ErrPrefixAlreadyRegistered
+	for _, alias := range command.Aliases() {
+		if _, found := r.registered[alias]; found {
+			return ErrAliasAlreadyRegistered
 		}
 	}
 
 	r.registered[command.Name()] = command
-	for _, prefix := range command.Prefixes() {
-		r.registered[prefix] = command
+	for _, alias := range command.Aliases() {
+		r.registered[alias] = command
 	}
 
 	return nil
 }
 
+// RegisterAll implements Registry
 func (r *registry) RegisterAll(commands ...commands.Command) error {
 	for _, command := range commands {
 		if err := r.Register(command); err != nil {
