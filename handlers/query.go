@@ -20,7 +20,9 @@ func GetQueryHandler(r registry.Registry, logger *log.Logger) http.HandlerFunc {
 
 		if len(split) == 0 {
 			response.WriteHeader(http.StatusNotFound)
-			response.Write(errNotFound)
+			if _, err := response.Write(errNotFound); err != nil {
+				logger.Printf("response closed before handler finished: %s", err.Error())
+			}
 			return
 		}
 
