@@ -2,10 +2,12 @@ package google
 
 import (
 	"fmt"
-	"gobunny/commands"
 	"log"
 	"net/http"
 	"strings"
+
+	"gobunny/commands"
+	"gobunny/errors"
 )
 
 type command struct {
@@ -31,6 +33,10 @@ func (c *command) Name() string {
 
 // Handle implements commands.Command
 func (c *command) Handle(args commands.Arguments, response http.ResponseWriter, request *http.Request) error {
+	if len(args) == 0 {
+		return c.Help(response, request)
+	}
+
 	joined := strings.Join(args, " ")
 	searchURL := fmt.Sprintf("https://google.com/search?q=%s", joined)
 
@@ -48,7 +54,7 @@ func (c *command) Help(response http.ResponseWriter, request *http.Request) erro
 	)
 
 	if err != nil {
-		c.log.Printf("response closed before handler finished: %s", err.Error())
+		return errors.NewErrResponseClosed(err)
 	}
 
 	return nil
@@ -58,15 +64,15 @@ func (c *command) Help(response http.ResponseWriter, request *http.Request) erro
 func (c *command) Readme(response http.ResponseWriter, request *http.Request) error {
 	_, err := response.Write(
 		[]byte(fmt.Sprintf(
-			`"gobunny %s" provides convenient shorthand for performing Google searches\n\n`+
-				`aliases: %s`,
+			"'gobunny %s' provides convenient shorthand for performing Google searches\n\n"+
+				"aliases: %s",
 			c.Name(),
 			strings.Join(c.Aliases(), ", "),
 		)),
 	)
 
 	if err != nil {
-		c.log.Printf("response closed before handler finished: %s", err.Error())
+		return errors.NewErrResponseClosed(err)
 	}
 
 	return nil

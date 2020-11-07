@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	stderrors "errors"
 	"log"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi"
 
+	"gobunny/commands"
+	"gobunny/errors"
 	"gobunny/registry"
 )
 
@@ -38,9 +41,9 @@ func GetQueryHandler(r registry.Registry, logger *log.Logger) http.HandlerFunc {
 			return
 		}
 
-		if len(split) < 2 {
-			if err := command.Help(response, request); err != nil {
-				logger.Printf("response closed before handler finished: %s", err.Error())
+		if len(split) == 1 {
+			if err := command.Handle(commands.Arguments{}, response, request); err != nil {
+				response.WriteHeader(http.StatusInternalServerError)
 			}
 
 			return
@@ -59,8 +62,15 @@ func GetQueryHandler(r registry.Registry, logger *log.Logger) http.HandlerFunc {
 			err = command.Handle(split[1:], response, request)
 		}
 
+		var responseErr *errors.ErrResponseClosed
+		if stderrors.As(err, &responseErr) {
+			logger.Printf(err.Error())
+			return
+		}
+
 		if err != nil {
 			response.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 	}
 }
