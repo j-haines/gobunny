@@ -1,17 +1,19 @@
 package handlers
 
 import (
-	"gobunny/commands/registry"
+	"log"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi"
+
+	"gobunny/registry"
 )
 
 var errNotFound = []byte("error: not found")
 
 // GetQueryHandler returns a http.HandlerFunc for handling querying Commands
-func GetQueryHandler(r registry.Registry) http.HandlerFunc {
+func GetQueryHandler(r registry.Registry, logger *log.Logger) http.HandlerFunc {
 	return func(response http.ResponseWriter, request *http.Request) {
 		query := chi.URLParam(request, "query")
 		split := strings.Split(query, " ")
@@ -27,27 +29,36 @@ func GetQueryHandler(r registry.Registry) http.HandlerFunc {
 		command, found := r.Get(name)
 		if !found {
 			response.WriteHeader(http.StatusNotFound)
-			response.Write(errNotFound)
+			if _, err := response.Write(errNotFound); err != nil {
+				logger.Printf("response closed before handler finished: %s", err.Error())
+			}
+
 			return
 		}
 
 		if len(split) < 2 {
-			command.Help(response, request)
+			if err := command.Help(response, request); err != nil {
+				logger.Printf("response closed before handler finished: %s", err.Error())
+			}
+
 			return
 		}
 
 		first := strings.ToLower(split[1])
+		var err error
 		switch first {
 		case "?":
 			fallthrough
 		case "help":
-			command.Help(response, request)
+			err = command.Help(response, request)
 		case "readme":
-			command.Readme(response, request)
+			err = command.Readme(response, request)
 		default:
-			if err := command.Handle(split[1:], response, request); err != nil {
-				response.WriteHeader(http.StatusInternalServerError)
-			}
+			err = command.Handle(split[1:], response, request)
+		}
+
+		if err != nil {
+			response.WriteHeader(http.StatusInternalServerError)
 		}
 	}
 }

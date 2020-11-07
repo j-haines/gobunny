@@ -11,13 +11,15 @@ import (
 	"github.com/go-chi/chi/middleware"
 
 	"gobunny/commands/google"
-	"gobunny/commands/registry"
 	"gobunny/handlers"
+	"gobunny/registry"
 )
 
-func makeRegistry() (registry.Registry, error) {
+func makeRegistry(logger *log.Logger) (registry.Registry, error) {
 	r := registry.New()
-	r.RegisterAll(&google.Command{})
+	if err := r.RegisterAll(google.NewCommand(logger)); err != nil {
+		return nil, err
+	}
 
 	return r, nil
 }
@@ -27,7 +29,7 @@ func main() {
 	host := flag.String("host", "", "hostname to bind http server to")
 	port := flag.Int("port", 8080, "port to bind http server to")
 
-	commands, err := makeRegistry()
+	commands, err := makeRegistry(logger)
 	if err != nil {
 		logger.Fatalf("unexpected error creating command registry: %s", err.Error())
 	}
@@ -37,7 +39,7 @@ func main() {
 	router.Use(middleware.RealIP)
 	router.Use(middleware.RequestID)
 	router.Get("/health", handlers.HealthCheckHandler())
-	router.Get("/q/{query}", handlers.GetQueryHandler(commands))
+	router.Get("/q/{query}", handlers.GetQueryHandler(commands, logger))
 
 	bindAddr := fmt.Sprintf("%s:%d", *host, *port)
 	logger.Printf("starting http server on %s", bindAddr)
