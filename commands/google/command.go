@@ -34,7 +34,9 @@ func (c *command) Name() string {
 // Handle implements commands.Command
 func (c *command) Handle(args commands.Arguments, response http.ResponseWriter, request *http.Request) error {
 	if len(args) == 0 {
-		return c.Help(response, request)
+		if _, err := response.Write([]byte(c.Help())); err != nil {
+			return errors.NewErrResponseClosed(err)
+		}
 	}
 
 	joined := strings.Join(args, " ")
@@ -45,35 +47,19 @@ func (c *command) Handle(args commands.Arguments, response http.ResponseWriter, 
 }
 
 // Help implements commands.Command
-func (c *command) Help(response http.ResponseWriter, request *http.Request) error {
-	_, err := response.Write(
-		[]byte(fmt.Sprintf(
-			"usage: gobunny %s <search query>",
-			c.Name(),
-		)),
+func (c *command) Help() string {
+	return fmt.Sprintf(
+		"usage: gobunny %s <search query>",
+		c.Name(),
 	)
-
-	if err != nil {
-		return errors.NewErrResponseClosed(err)
-	}
-
-	return nil
 }
 
 // Readme implements commands.Command
-func (c *command) Readme(response http.ResponseWriter, request *http.Request) error {
-	_, err := response.Write(
-		[]byte(fmt.Sprintf(
-			"'gobunny %s' provides convenient shorthand for performing Google searches\n\n"+
-				"aliases: %s",
-			c.Name(),
-			strings.Join(c.Aliases(), ", "),
-		)),
+func (c *command) Readme() string {
+	return fmt.Sprintf(
+		"'gobunny %s' provides convenient shorthand for performing Google searches\n\n"+
+			"aliases: %s",
+		c.Name(),
+		strings.Join(c.Aliases(), ", "),
 	)
-
-	if err != nil {
-		return errors.NewErrResponseClosed(err)
-	}
-
-	return nil
 }

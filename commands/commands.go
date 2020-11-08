@@ -19,8 +19,8 @@ type Command interface {
 	Handle(Arguments, http.ResponseWriter, *http.Request) error
 
 	// Help is a http.HandlerFunc for displaying a Command help page
-	Help(http.ResponseWriter, *http.Request) error
+	Help() string
 
 	// Readme is a http.HandlerFunc for displaying a Command readme page
-	Readme(http.ResponseWriter, *http.Request) error
+	Readme() string
 }

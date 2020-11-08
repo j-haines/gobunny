@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 
 	"gobunny/commands/google"
+	"gobunny/commands/osrs"
 	"gobunny/commands/random"
 	"gobunny/handlers"
 	"gobunny/registry"
@@ -20,6 +21,7 @@ func makeRegistry(logger *log.Logger) (registry.Registry, error) {
 	r := registry.New()
 	err := r.RegisterAll(
 		google.NewCommand(logger),
+		osrs.NewCommand(logger),
 		random.NewCommand(logger),
 	)
 
