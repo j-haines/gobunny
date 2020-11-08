@@ -64,40 +64,24 @@ func (c *command) Handle(args commands.Arguments, response http.ResponseWriter, 
 	return nil
 }
 
-func (c *command) Help(response http.ResponseWriter, request *http.Request) error {
-	_, err := response.Write(
-		[]byte(fmt.Sprintf(
-			"usage: \n\tgobunny %s\n\tgobunny %s [max]\n\tgobunny %s [min] [max]",
-			c.Name(),
-			c.Name(),
-			c.Name(),
-		)),
+func (c *command) Help() string {
+	return fmt.Sprintf(
+		"usage: \n\tgobunny %s\n\tgobunny %s [max]\n\tgobunny %s [min] [max]",
+		c.Name(),
+		c.Name(),
+		c.Name(),
 	)
-
-	if err != nil {
-		return errors.NewErrResponseClosed(err)
-	}
-
-	return nil
 }
 
-func (c *command) Readme(response http.ResponseWriter, request *http.Request) error {
-	_, err := response.Write(
-		[]byte(fmt.Sprintf(
-			"'gobunny %s' provides random number generation\n\n"+
-				"- 'gobunny %s [max]' generates a random number between 0 and [max]\n"+
-				"- 'gobunny %s [min] [max] generates a random number between [min] and [max]\n\n"+
-				"aliases: %s",
-			c.Name(),
-			c.Name(),
-			c.Name(),
-			strings.Join(c.Aliases(), ", "),
-		)),
+func (c *command) Readme() string {
+	return fmt.Sprintf(
+		"'gobunny %s' provides random number generation\n\n"+
+			"- 'gobunny %s [max]' generates a random number between 0 and [max]\n"+
+			"- 'gobunny %s [min] [max] generates a random number between [min] and [max]\n\n"+
+			"aliases: %s",
+		c.Name(),
+		c.Name(),
+		c.Name(),
+		strings.Join(c.Aliases(), ", "),
 	)
-
-	if err != nil {
-		return errors.NewErrResponseClosed(err)
-	}
-
-	return nil
 }

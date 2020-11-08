@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	stderrors "errors"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -9,7 +9,7 @@ import (
 	"github.com/go-chi/chi"
 
 	"gobunny/commands"
-	"gobunny/errors"
+	gerrors "gobunny/errors"
 	"gobunny/registry"
 )
 
@@ -55,15 +55,19 @@ func GetQueryHandler(r registry.Registry, logger *log.Logger) http.HandlerFunc {
 		case "?":
 			fallthrough
 		case "help":
-			err = command.Help(response, request)
+			if _, err = response.Write([]byte(command.Help())); err != nil {
+				err = gerrors.NewErrResponseClosed(err)
+			}
 		case "readme":
-			err = command.Readme(response, request)
+			if _, err = response.Write([]byte(command.Readme())); err != nil {
+				err = gerrors.NewErrResponseClosed(err)
+			}
 		default:
 			err = command.Handle(split[1:], response, request)
 		}
 
-		var responseErr *errors.ErrResponseClosed
-		if stderrors.As(err, &responseErr) {
+		var gerr *gerrors.ErrResponseClosed
+		if errors.As(err, &gerr) {
 			logger.Printf(err.Error())
 			return
 		}

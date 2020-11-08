@@ -28,10 +28,10 @@ type (
 var (
 	// ErrAliasAlreadyRegistered indicates one of a Command's Aliases()
 	// values is already in the registry
-	ErrAliasAlreadyRegistered = errors.New("command alias has already been registered")
+	ErrAliasAlreadyRegistered = "command alias has already been registered"
 
 	// ErrNameAlreadyRegistered indicates a Command's Name() value is already in the registry
-	ErrNameAlreadyRegistered = errors.New("command name has already been registered")
+	ErrNameAlreadyRegistered = "command name has already been registered"
 )
 
 // New returns an instance of a Registry implementation
@@ -51,12 +51,12 @@ func (r *registry) Get(name string) (commands.Command, bool) {
 // Register implements Registry
 func (r *registry) Register(command commands.Command) error {
 	if _, found := r.registered[command.Name()]; found {
-		return ErrNameAlreadyRegistered
+		return errors.New(ErrNameAlreadyRegistered)
 	}
 
 	for _, alias := range command.Aliases() {
 		if _, found := r.registered[alias]; found {
-			return ErrAliasAlreadyRegistered
+			return errors.New(ErrAliasAlreadyRegistered)
 		}
 	}
 

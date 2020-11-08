@@ -8,7 +8,7 @@ deps: clean
 	go mod vendor
 
 test: lint
-	go test -race
+	go test -race $(shell go list ./...)
 
 lint: clean
 	go vet ./...
