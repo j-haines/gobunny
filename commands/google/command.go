@@ -37,6 +37,8 @@ func (c *command) Handle(args commands.Arguments, response http.ResponseWriter, 
 		if _, err := response.Write([]byte(c.Help())); err != nil {
 			return errors.NewErrResponseClosed(err)
 		}
+
+		return nil
 	}
 
 	joined := strings.Join(args, " ")
