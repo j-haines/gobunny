@@ -68,11 +68,12 @@ func GetQueryHandler(r registry.Registry, logger *log.Logger) http.HandlerFunc {
 
 		var gerr *gerrors.ErrResponseClosed
 		if errors.As(err, &gerr) {
-			logger.Printf(err.Error())
+			logger.Println(err.Error())
 			return
 		}
 
 		if err != nil {
+			logger.Println(err.Error())
 			response.WriteHeader(http.StatusInternalServerError)
 			return
 		}
