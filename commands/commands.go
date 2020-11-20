@@ -7,20 +7,17 @@ import (
 // Arguments are passed to the Command Handle function
 type Arguments []string
 
+// Route is a Method and Route pattern pair for calling the Command handler
+type Route struct {
+	Method   string
+	Patterns []string
+}
+
 // Command is the interface for implementing new GoBunny commands
 type Command interface {
-	// Aliases returns the set of strings that will invoke the Command
-	Aliases() []string
-
-	// Name returns the primary alias used for the Command
-	Name() string
-
 	// Handle is called by the GoBunny HTTP Handler
-	Handle(Arguments, http.ResponseWriter, *http.Request) error
+	Handle(http.ResponseWriter, *http.Request) error
 
-	// Help is a http.HandlerFunc for displaying a Command help page
-	Help() string
-
-	// Readme is a http.HandlerFunc for displaying a Command readme page
-	Readme() string
+	// Routes returns the URL path routing rules for calling a Command
+	Routes() []Route
 }

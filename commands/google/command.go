@@ -4,15 +4,19 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
+	"net/url"
 
 	"gobunny/commands"
-	"gobunny/errors"
+	"gobunny/handlers"
+
+	"github.com/go-chi/chi"
 )
 
 type command struct {
 	log *log.Logger
 }
+
+const baseURL = "https://google.com"
 
 // NewCommand returns a Command which provides support for Google searches
 func NewCommand(logger *log.Logger) commands.Command {
@@ -21,47 +25,31 @@ func NewCommand(logger *log.Logger) commands.Command {
 	}
 }
 
-// Aliases implements commands.Command
-func (c *command) Aliases() []string {
-	return []string{"g"}
-}
-
-// Name implements commands.Command
-func (c *command) Name() string {
-	return "google"
-}
-
 // Handle implements commands.Command
-func (c *command) Handle(args commands.Arguments, response http.ResponseWriter, request *http.Request) error {
-	if len(args) == 0 {
-		if _, err := response.Write([]byte(c.Help())); err != nil {
-			return errors.NewErrResponseClosed(err)
-		}
-
-		return nil
+func (c *command) Handle(response http.ResponseWriter, request *http.Request) error {
+	query := chi.URLParam(request, "query")
+	if len(query) == 0 {
+		return handlers.Redirect(response, request, baseURL)
 	}
 
-	joined := strings.Join(args, " ")
-	searchURL := fmt.Sprintf("https://google.com/search?q=%s", joined)
+	params, err := url.ParseQuery(query)
+	if err != nil {
+		return handlers.NewHTTPError(err.Error(), http.StatusBadRequest)
+	}
 
-	http.Redirect(response, request, searchURL, http.StatusSeeOther)
-	return nil
+	searchURL := fmt.Sprintf("%s/search?q=%s", baseURL, params.Encode())
+	return handlers.Redirect(response, request, searchURL)
 }
 
-// Help implements commands.Command
-func (c *command) Help() string {
-	return fmt.Sprintf(
-		"usage: gobunny %s <search query>",
-		c.Name(),
-	)
-}
-
-// Readme implements commands.Command
-func (c *command) Readme() string {
-	return fmt.Sprintf(
-		"'gobunny %s' provides convenient shorthand for performing Google searches\n\n"+
-			"aliases: %s",
-		c.Name(),
-		strings.Join(c.Aliases(), ", "),
-	)
+func (c *command) Routes() []commands.Route {
+	return []commands.Route{
+		{
+			Method: http.MethodGet,
+			Patterns: []string{
+				"google {query}",
+				"goog {query}",
+				"g {query}",
+			},
+		},
+	}
 }
