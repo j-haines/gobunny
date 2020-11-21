@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
+	"net/url"
 
 	"gobunny/commands"
+	"gobunny/handlers"
+
+	"github.com/go-chi/chi"
 )
 
 type command struct {
@@ -30,29 +33,26 @@ func (c *command) Name() string {
 	return "osrs"
 }
 
-func (c *command) Handle(args commands.Arguments, response http.ResponseWriter, request *http.Request) error {
-	var redirectURL string
-	if len(args) == 0 {
-		redirectURL = wikiURL
-	} else {
-		joined := strings.Join(args, " ")
-		redirectURL = fmt.Sprintf("%s/w/%s", wikiURL, joined)
+func (c *command) Handle(response http.ResponseWriter, request *http.Request) error {
+	query := chi.URLParam(request, "query")
+	if len(query) == 0 {
+		return handlers.Redirect(response, request, wikiURL)
 	}
 
-	http.Redirect(response, request, redirectURL, http.StatusSeeOther)
-	return nil
+	params, err := url.ParseQuery(query)
+	if err != nil {
+		return handlers.NewHTTPError(err.Error(), http.StatusBadRequest)
+	}
+
+	searchURL := fmt.Sprintf("%s/w/%s", wikiURL, params.Encode())
+	return handlers.Redirect(response, request, searchURL)
 }
 
-func (c *command) Help() string {
-	return fmt.Sprintf(
-		"usage: gobunny %s <search query>",
-		c.Name(),
-	)
-}
-
-func (c *command) Readme() string {
-	return fmt.Sprintf(
-		"'gobunny %s' allows looking up Old School RuneScape wiki articles",
-		c.Name(),
-	)
+func (c *command) Routes() []commands.Route {
+	return []commands.Route{
+		{
+			Method:   http.MethodGet,
+			Patterns: []string{"osrs {query}"},
+		},
+	}
 }
