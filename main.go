@@ -120,6 +120,7 @@ func main() {
 		google.NewCommand(logger),
 		osrs.NewCommand(logger),
 		random.NewCommand(logger),
+		marketwatch.NewCommand(logger, db),
 	)
 	if err != nil {
 		logger.Fatalf("unexpected error while creating registry routes: '%s'", err.Error())
