@@ -38,7 +38,7 @@ func NewStore(ctx context.Context, config Config) (store.Store, error) {
 }
 
 func (s *redisStore) Create(key model.Key, m model.Model) error {
-	success, err := s.client.SetNX(s.ctx, key.String(), m.Value(), 0).Result()
+	success, err := s.client.SetNX(s.ctx, key.String(), m.Value().String(), 0).Result()
 	if err != nil {
 		return err
 	}

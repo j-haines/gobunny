@@ -57,6 +57,7 @@ func (c *command) Handle(response http.ResponseWriter, request *http.Request) er
 	t := &ticker.Ticker{}
 	if err := c.db.Get(key, t); err != nil {
 		if err != store.ErrNotFound {
+			fmt.Printf("unexpected error getting ticker from store: %s", err.Error())
 			return handlers.NewHTTPError("", http.StatusInternalServerError)
 		}
 
@@ -64,10 +65,14 @@ func (c *command) Handle(response http.ResponseWriter, request *http.Request) er
 		if err != nil {
 			return err
 		}
+
+		if err := c.db.Create(t.Key(), t); err != nil {
+			fmt.Printf("unexpected error creating ticker in store: %s", err.Error())
+			return handlers.NewHTTPError("", http.StatusInternalServerError)
+		}
 	}
 
-	http.Redirect(response, request, t.Href, http.StatusSeeOther)
-	return nil
+	return handlers.Redirect(response, request, t.Href)
 }
 
 func (c *command) Routes() []commands.Route {
