@@ -1,11 +1,17 @@
-all: deps test dist
+all: deps test build
 
 BUILD=$(shell git rev-parse HEAD)
+
+build: clean
+	go build -o dist/gobunny
 
 deps: clean
 	go mod tidy
 	go mod download
 	go mod vendor
+
+docker: build
+	docker-compose -f ./docker-compose.yml up --detach
 
 test: lint
 	go test -race $(shell go list ./...)
@@ -17,6 +23,4 @@ lint: clean
 clean:
 	rm -rf dist/*
 
-
-dist: clean
-	go build -o dist/gobunny
+.PHONY: build deps docker test lint clean
