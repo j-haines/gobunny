@@ -1,0 +1,18 @@
+version: "3.7"
+services:
+  gobunny:
+    build:
+      context: .
+      dockerfile: gobunny.Dockerfile
+    command: /opt/gobunny/gobunny -redis-host=redis -host=0.0.0.0
+    depends_on:
+      - redis
+    ports:
+      - "8080:8080"
+    volumes:
+      - "./dist:/opt/gobunny"
+  
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"

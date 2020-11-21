@@ -5,15 +5,24 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"gobunny/commands"
-	"gobunny/errors"
+	"gobunny/handlers"
 	"gobunny/models/ticker"
 	"gobunny/store"
+
+	"github.com/go-chi/chi"
 )
 
-var baseURL = "https://www.marketwatch.com"
+const baseURL = "https://www.marketwatch.com"
+
+var possibleSecurities = []string{
+	"stock",
+	"cryptocurrency",
+	"index",
+	"fund",
+	"currency",
+}
 
 type command struct {
 	log    *log.Logger
@@ -34,38 +43,24 @@ func NewCommand(logger *log.Logger, db store.Store) commands.Command {
 	}
 }
 
-func (c *command) Aliases() []string {
-	return []string{"mw", "tick", "ticker"}
-}
-
-func (c *command) Name() string {
-	return "marketwatch"
-}
-
-func (c *command) Handle(args commands.Arguments, response http.ResponseWriter, request *http.Request) error {
-	if len(args) == 0 {
-		http.Redirect(response, request, baseURL, http.StatusSeeOther)
-		return nil
+func (c *command) Handle(response http.ResponseWriter, request *http.Request) error {
+	var tick string
+	if tick = chi.URLParam(request, "ticker"); len(tick) == 0 {
+		return handlers.Redirect(response, request, baseURL)
 	}
 
-	if len(args) > 1 {
-		if _, err := response.Write([]byte(c.Help())); err != nil {
-			return errors.NewErrResponseClosed(err)
-		}
-	}
-
-	key, err := ticker.Key(args[0])
+	key, err := ticker.Key(tick)
 	if err != nil {
-		return err
+		return handlers.NewHTTPError(err.Error(), http.StatusBadRequest)
 	}
 
 	t := &ticker.Ticker{}
 	if err := c.db.Get(key, t); err != nil {
 		if err != store.ErrNotFound {
-			return err
+			return handlers.NewHTTPError("", http.StatusInternalServerError)
 		}
 
-		t, err = c.fetchTicker(key.String())
+		t, err = c.fetchTicker(tick)
 		if err != nil {
 			return err
 		}
@@ -75,20 +70,18 @@ func (c *command) Handle(args commands.Arguments, response http.ResponseWriter, 
 	return nil
 }
 
-func (c *command) Help() string {
-	return fmt.Sprintf(
-		"usage: gobunny %s <ticker>",
-		c.Name(),
-	)
-}
-
-func (c *command) Readme() string {
-	return fmt.Sprintf(
-		"'gobunny %s' allows looking up securities tickers on MarketWatch\n\n"+
-			"aliases: %s",
-		c.Name(),
-		strings.Join(c.Aliases(), ", "),
-	)
+func (c *command) Routes() []commands.Route {
+	return []commands.Route{
+		{
+			Method: http.MethodGet,
+			Patterns: []string{
+				`marketwatch`,
+				`marketwatch {ticker}`,
+				`ticker {ticker}`,
+				`tick {ticker}`,
+			},
+		},
+	}
 }
 
 func (c *command) fetchTicker(symbol string) (*ticker.Ticker, error) {
@@ -107,9 +100,24 @@ func (c *command) fetchTicker(symbol string) (*ticker.Ticker, error) {
 		return nil, err
 	}
 
-	redirectTo, err := response.Location()
-	if err != nil {
-		return nil, fmt.Errorf("invalid redirect: %s", err.Error())
+	var redirectTo *url.URL
+	if response.StatusCode == http.StatusFound {
+		redirectTo, err = response.Location()
+		if err != nil {
+			return nil, fmt.Errorf("invalid redirect: %s", err.Error())
+		}
+	} else {
+		for _, security := range possibleSecurities {
+			securityURL, found := c.tryFetchSecurity(symbol, security)
+			if found {
+				redirectTo = securityURL
+				break
+			}
+		}
+	}
+
+	if redirectTo == nil {
+		return nil, handlers.NewHTTPError("ticker not found", http.StatusNotFound)
 	}
 
 	t, err := ticker.New(ticker.WithSymbol(symbol), ticker.WithHref(redirectTo.String()))
@@ -118,4 +126,25 @@ func (c *command) fetchTicker(symbol string) (*ticker.Ticker, error) {
 	}
 
 	return t, nil
+}
+
+func (c *command) tryFetchSecurity(symbol string, security string) (*url.URL, bool) {
+	s := fmt.Sprintf("%s/investing/%s/%s", baseURL, security, symbol)
+	securityURL, err := url.Parse(s)
+	if err != nil {
+		c.log.Printf("malformed MarketWatch URL '%s': %s", s, err.Error())
+		return nil, false
+	}
+
+	response, err := c.client.Get(securityURL.String())
+	if err != nil {
+		c.log.Printf("error during HTTP client GET '%s': %s", securityURL.String(), err.Error())
+		return nil, false
+	}
+
+	if response.StatusCode == http.StatusOK {
+		return securityURL, true
+	}
+
+	return nil, false
 }
